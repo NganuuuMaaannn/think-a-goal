@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   View,
   Text,
@@ -120,7 +120,6 @@ export default function SignupScreen() {
     }
   };
 
-  // ✅ Strength color
   const getStrengthColor = () => {
     switch (passwordStrength) {
       case "Weak":
@@ -152,6 +151,7 @@ export default function SignupScreen() {
         <Text style={styles.title}>Sign Up</Text>
 
         <View style={styles.box}>
+    
           {/* First Name */}
           <View style={[styles.inputWrapper, focusedInput === "firstName" && styles.inputFocused]}>
             <Feather
@@ -331,7 +331,11 @@ export default function SignupScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: "center", padding: 20 },
+  container: { 
+    flex: 1, 
+    alignItems: "center", 
+    padding: 20 
+  },
   title: {
     fontSize: 40,
     fontWeight: "bold",
@@ -364,12 +368,31 @@ const styles = StyleSheet.create({
     marginVertical: 10,
     paddingHorizontal: 12,
   },
-  inputFocused: { borderColor: "#0078ff", backgroundColor: "#fff" },
-  icon: { marginRight: 10 },
-  icon2: { marginLeft: 5, marginRight: 10 },
-  input: { flex: 1, paddingVertical: 12, fontSize: 15, color: "#333" },
-  picker: { flex: 1, color: "#333", height: 50 },
-  iconRight: { marginLeft: 10 },
+  inputFocused: { 
+    borderColor: "#0078ff", 
+    backgroundColor: "#fff" 
+  },
+  icon: { 
+    marginRight: 10 
+  },
+  icon2: { 
+    marginLeft: 5, 
+    marginRight: 10 
+  },
+  input: { 
+    flex: 1, 
+    paddingVertical: 12, 
+    fontSize: 15, 
+    color: "#333" 
+  },
+  picker: { 
+    flex: 1, 
+    color: "#333", 
+    height: 50 
+  },
+  iconRight: { 
+    marginLeft: 10 
+  },
   button: {
     backgroundColor: "#0078ff",
     width: "100%",
@@ -377,11 +400,34 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginTop: 20,
   },
-  buttonText: { color: "#fff", textAlign: "center", fontSize: 16, fontWeight: "bold" },
-  strengthText: { alignSelf: "flex-start", marginLeft: 10, fontWeight: "600", marginBottom: 8 },
-  matchText: { alignSelf: "flex-start", marginLeft: 10, fontWeight: "600", marginTop: 4 },
-  footerText: { marginTop: 30, color: "#fff", fontSize: 14, textAlign: "center" },
-  link: { color: "#0078ff", fontWeight: "bold" },
+  buttonText: { 
+    color: "#fff", 
+    textAlign: "center", 
+    fontSize: 16, 
+    fontWeight: "bold" 
+  },
+  strengthText: { 
+    alignSelf: "flex-start", 
+    marginLeft: 10, 
+    fontWeight: "600", 
+    marginBottom: 8 
+  },
+  matchText: { 
+    alignSelf: "flex-start", 
+    marginLeft: 10, 
+    fontWeight: "600", 
+    marginTop: 4 
+  },
+  footerText: { 
+    marginTop: 30, 
+    color: "#fff", 
+    fontSize: 14, 
+    textAlign: "center" 
+  },
+  link: { 
+    color: "#0078ff", 
+    fontWeight: "bold" 
+  },
   modalBackground: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",
@@ -395,7 +441,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     width: "80%",
   },
-  modalText: { textAlign: "center", fontSize: 16, color: "#333", marginVertical: 10 },
+  modalText: { 
+    textAlign: "center", 
+    fontSize: 16, 
+    color: "#333", 
+    marginVertical: 10 
+  },
   modalBtn: {
     backgroundColor: "#0078ff",
     paddingVertical: 10,
@@ -405,5 +456,8 @@ const styles = StyleSheet.create({
     width: "50%",
     alignItems: "center",
   },
-  modalBtnText: { color: "#fff", fontWeight: "bold" },
+  modalBtnText: { 
+    color: "#fff", 
+    fontWeight: "bold" 
+  },
 });

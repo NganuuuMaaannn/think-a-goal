@@ -136,7 +136,7 @@ export default function LoginScreen() {
           </Text>
         </Text>
 
-        {/* ✅ Success/Error Modal */}
+        {/* Success/Error Modal */}
         <Modal transparent visible={modalVisible} animationType="fade">
           <View style={styles.modalBackground}>
             <View style={styles.modalContainer}>
@@ -208,14 +208,12 @@ const styles = StyleSheet.create({
   footerText: { marginTop: 30, color: '#fff', fontSize: 14 },
   link: { color: '#0078ff', fontWeight: 'bold' },
 
-  // ✅ Modal styles
   modalBackground: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
   modalContainer: { backgroundColor: '#fff', borderRadius: 16, padding: 25, alignItems: 'center', width: '80%' },
   modalText: { textAlign: 'center', fontSize: 16, color: '#333', marginVertical: 10 },
   modalBtn: { backgroundColor: '#0078ff', paddingVertical: 10, paddingHorizontal: 25, borderRadius: 8, marginTop: 10, width: '50%', alignItems: 'center' },
   modalBtnText: { color: '#fff', fontWeight: 'bold' },
 
-  // ✅ Loading modal
   loadingOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' },
   loadingBox: { backgroundColor: '#fff', padding: 30, borderRadius: 16, alignItems: 'center', elevation: 10 },
   loadingText: { marginTop: 10, fontSize: 16, color: '#333', fontWeight: '600' },

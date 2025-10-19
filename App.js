@@ -5,6 +5,7 @@ import LoginScreen from './components/LoginScreen';
 import SignupScreen from './components/SignupScreen';
 import BottomTabs from './components/BottomTabs';
 import EditProfileScreen from './components/EditProfileScreen';
+import RecentlyDeleteScreen from './components/RecentlyDeleteScreen';
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "./utils/firebaseConfig";
 import { ThemeProvider } from "./utils/ThemeContext";
@@ -34,6 +35,7 @@ export default function App() {
             <Stack.Screen name="Signup" component={SignupScreen} />
             <Stack.Screen name="MainTabs" component={BottomTabs} />
             <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+            <Stack.Screen name="RecentlyDelete" component={RecentlyDeleteScreen} />
           </Stack.Navigator>
         </NavigationContainer>
       </SafeAreaProvider>
