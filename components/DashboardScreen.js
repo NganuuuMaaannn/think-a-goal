@@ -106,11 +106,10 @@ export default function DashboardScreen() {
       }));
 
       // Merge with local goals
-      const saved = await AsyncStorage.getItem("goals");
+      const saved = await AsyncStorage.getItem(`goals_${user.uid}`)
       const localGoals = saved ? JSON.parse(saved) : [];
 
       // Build a map of firestore goals by id and by text for quick lookup
-      const firestoreById = new Map(userGoals.map((g) => [g.id, g]));
       const firestoreByText = new Map(userGoals.map((g) => [g.text, g]));
 
       // Start with Firestore goals (they have stable ids)
@@ -134,7 +133,7 @@ export default function DashboardScreen() {
       });
 
       setGoals(deduped);
-      await AsyncStorage.setItem("goals", JSON.stringify(deduped));
+      await AsyncStorage.setItem(`goals_${user.uid}`, JSON.stringify(deduped));
 
       console.log(`Loaded ${userGoals.length} goals from Firestore, merged ${localGoals.length} local`);
     } catch (error) {
@@ -145,8 +144,8 @@ export default function DashboardScreen() {
   // On login, load goals
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user?.displayName) {
-        const first = user.displayName.split(" ")[0] || "User";
+      if (user) {
+        const first = user.displayName?.split(" ")[0] || "User";
         setFirstName(first);
         loadGoalsFromFirestore();
       }
