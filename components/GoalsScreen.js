@@ -89,7 +89,9 @@ export default function GoalsScreen() {
   // Load goals from AsyncStorage
   const loadGoals = async () => {
     try {
-      const savedGoals = await AsyncStorage.getItem("goals");
+      const user = auth.currentUser;
+        if (!user) return;
+        const savedGoals = await AsyncStorage.getItem(`goals_${user.uid}`);
       if (savedGoals) {
         const parsed = JSON.parse(savedGoals);
         // ensure each goal has an id
@@ -98,7 +100,7 @@ export default function GoalsScreen() {
           ...g,
         }));
         setGoals(withIds);
-        await AsyncStorage.setItem("goals", JSON.stringify(withIds));
+        await AsyncStorage.setItem(`goals_${user.uid}`, JSON.stringify(withIds));
       } else setGoals([]);
     } catch (error) {
       console.error("Error loading goals:", error);
@@ -119,7 +121,7 @@ export default function GoalsScreen() {
       }));
 
       // Merge with local goals
-      const saved = await AsyncStorage.getItem("goals");
+      const saved = await AsyncStorage.getItem(`goals_${user.uid}`)
       const localGoals = saved ? JSON.parse(saved) : [];
 
       // Build a map of firestore goals by id and by text for quick lookup
@@ -147,7 +149,7 @@ export default function GoalsScreen() {
       });
 
       setGoals(deduped);
-      await AsyncStorage.setItem("goals", JSON.stringify(deduped));
+      await AsyncStorage.setItem(`goals_${user.uid}`, JSON.stringify(deduped));
 
       console.log(`Loaded ${userGoals.length} goals from Firestore, merged ${localGoals.length} local`);
     } catch (error) {
@@ -162,7 +164,9 @@ export default function GoalsScreen() {
   // Save goals back to AsyncStorage
   const saveGoals = async (updatedGoals) => {
     setGoals(updatedGoals);
-    await AsyncStorage.setItem("goals", JSON.stringify(updatedGoals));
+    const user = auth.currentUser;
+      if (user)
+      await AsyncStorage.setItem(`goals_${user.uid}`, JSON.stringify(updatedGoals));
   };
 
   // Toggle completion
