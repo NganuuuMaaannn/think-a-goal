@@ -412,7 +412,7 @@ export default function GoalsScreen() {
           <Ionicons name="add" size={30} color="#fff" />
         </TouchableOpacity>
 
-        <Modal transparent visible={modalVisible} animationType="slide">
+        <Modal transparent visible={modalVisible}>
           <View style={styles.modalBackground}>
             <View
               style={[
@@ -436,8 +436,8 @@ export default function GoalsScreen() {
                   {
                     backgroundColor: darkMode ? "#1E1E1E" : "#f9f9f9",
                     color: darkMode ? "#fff" : "#000",
-                    height: Math.max(100, goalText.split("\n").length * 22), // auto height
-                    textAlignVertical: "top", // aligns text at top
+                    height: Math.max(100, goalText.split("\n").length * 22),
+                    textAlignVertical: "top",
                   },
                 ]}
                 multiline
@@ -489,8 +489,11 @@ export default function GoalsScreen() {
                   {
                     backgroundColor: darkMode ? "#1E1E1E" : "#f9f9f9",
                     color: darkMode ? "#fff" : "#000",
+                    height: Math.max(100, goalText.split("\n").length * 22),
+                    textAlignVertical: "top",
                   },
                 ]}
+                multiline
               />
               <View style={styles.modalButtons}>
                 <TouchableOpacity
