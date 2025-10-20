@@ -260,17 +260,6 @@ export default function ProfileScreen() {
 
                   <View style={styles.modalButtons}>
                     <TouchableOpacity
-                      style={[
-                        styles.modalBtn,
-                        { backgroundColor: darkMode ? "#444" : "#ddd" },
-                      ]}
-                      onPress={() => setModalVisible(false)}
-                    >
-                      <Text style={{ color: "#fff", fontWeight: "600" }}>
-                        Cancel
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
                       style={[styles.modalBtn, { backgroundColor: "#0078ff" }]}
                       onPress={handleLogout}
                     >
@@ -278,6 +267,18 @@ export default function ProfileScreen() {
                         Log Out
                       </Text>
                     </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.modalBtn,
+                        { backgroundColor: darkMode ? "#444" : "#888" },
+                      ]}
+                      onPress={() => setModalVisible(false)}
+                    >
+                      <Text style={{ color: "#fff", fontWeight: "600" }}>
+                        Cancel
+                      </Text>
+                    </TouchableOpacity>
+                  
                   </View>
                 </View>
               </View>
