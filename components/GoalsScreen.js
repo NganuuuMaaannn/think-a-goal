@@ -18,6 +18,7 @@ import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import uuid from "react-native-uuid";
 import { auth, db } from "../utils/firebaseConfig";
 import { doc, setDoc, getDocs, collection, query, where, deleteDoc, addDoc } from "firebase/firestore";
+import { KeyboardAvoidingView, Platform, ScrollView } from "react-native";
 
 export default function GoalsScreen() {
   const { darkMode, setDarkMode } = useContext(ThemeContext);
@@ -35,6 +36,7 @@ export default function GoalsScreen() {
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertTitle, setAlertTitle] = useState("");
   const [alertMessage, setAlertMessage] = useState("");
+  const [inputHeight, setInputHeight] = useState(100);
 
   const showAlert = (title, message) => {
     setAlertTitle(title);
@@ -326,7 +328,7 @@ export default function GoalsScreen() {
           { backgroundColor: darkMode ? "#121212" : "#fff" },
         ]}
       >
-        <Text style={[styles.textTitle, { color: darkMode ? "#fff" : "#555" }]}> List of Goals </Text>
+        <Text style={[styles.textTitle, { color: darkMode ? "#fff" : "#000" }]}> List of Goals </Text>
         {goals.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Text style={[styles.text, { color: darkMode ? "#fff" : "#555" }]}>
@@ -396,7 +398,7 @@ export default function GoalsScreen() {
                   />
                 </TouchableOpacity>
 
-                {/* 🗑️ Delete Icon */}
+                {/* Delete Icon */}
                 <TouchableOpacity onPress={() => openDeleteModal(item)}>
                   <Ionicons name="trash-outline" size={22} color="#ff3b30" />
                 </TouchableOpacity>
@@ -412,105 +414,135 @@ export default function GoalsScreen() {
           <Ionicons name="add" size={30} color="#fff" />
         </TouchableOpacity>
 
-        <Modal transparent visible={modalVisible}>
-          <View style={styles.modalBackground}>
-            <View
-              style={[
-                styles.modalContainer,
-                { backgroundColor: darkMode ? "#222" : "#fff" },
-              ]}
+        <Modal transparent visible={modalVisible} animationType="fade">
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            style={styles.modalBackground}
+          >
+            <ScrollView
+              contentContainerStyle={{ flexGrow: 1, justifyContent: "center", alignItems: "center" }}
+              keyboardShouldPersistTaps="handled"
             >
-              <Text
+              <View
                 style={[
-                  styles.modalTitle,
-                  { color: darkMode ? "#fff" : "#000" },
+                  styles.modalContainer,
+                  { backgroundColor: darkMode ? "#222" : "#fff" },
                 ]}
               >
-                Add New Goal
-              </Text>
-              <TextInput
-                placeholder="Enter your goal"
-                placeholderTextColor={darkMode ? "#888" : "#999"}
-                style={[
-                  styles.input,
-                  {
-                    backgroundColor: darkMode ? "#1E1E1E" : "#f9f9f9",
-                    color: darkMode ? "#fff" : "#000",
-                    height: Math.max(100, goalText.split("\n").length * 22),
-                    textAlignVertical: "top",
-                  },
-                ]}
-                multiline
-                value={goalText}
-                onChangeText={setGoalText}
-              />
-              <View style={styles.modalButtons}>
-                <TouchableOpacity
-                  style={[styles.modalBtn, { backgroundColor: "#0078ff" }]}
-                  onPress={addGoal}
+                <Text
+                  style={[
+                    styles.modalTitle,
+                    { color: darkMode ? "#fff" : "#000" },
+                  ]}
                 >
-                  <Text style={{ color: "#fff", fontWeight: "600" }}>Save</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.modalBtn, { backgroundColor: "#888" }]}
-                  onPress={() => setModalVisible(false)}
-                >
-                  <Text style={{ color: "#fff", fontWeight: "600" }}>
-                    Cancel
-                  </Text>
-                </TouchableOpacity>
+                  Add New Goal
+                </Text>
+                <TextInput
+                  placeholder="Enter your goal"
+                  placeholderTextColor={darkMode ? "#888" : "#999"}
+                  onContentSizeChange={(e) =>
+                    setInputHeight(Math.min(200, e.nativeEvent.contentSize.height))
+                  }
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: darkMode ? "#1E1E1E" : "#f9f9f9",
+                      color: darkMode ? "#fff" : "#000",
+                      height: inputHeight,
+                      textAlignVertical: "top",
+                      width: "100%",
+                      flexWrap: "wrap",
+                    },
+                  ]}
+                  multiline
+                  value={goalText}
+                  onChangeText={setGoalText}
+                />
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity
+                    style={[styles.modalBtn, { backgroundColor: "#0078ff" }]}
+                    onPress={addGoal}
+                  >
+                    <Text style={{ color: "#fff", fontWeight: "600" }}>Save</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.modalBtn, { backgroundColor: "#888" }]}
+                    onPress={() => setModalVisible(false)}
+                  >
+                    <Text style={{ color: "#fff", fontWeight: "600" }}>Cancel</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
-          </View>
+            </ScrollView>
+          </KeyboardAvoidingView>
         </Modal>
 
         {/* Edit Modal */}
         <Modal transparent visible={editModalVisible} animationType="fade">
-          <View style={styles.modalBackground}>
-            <View
-              style={[
-                styles.modalContainer,
-                { backgroundColor: darkMode ? "#222" : "#fff" },
-              ]}
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            style={styles.modalBackground}
+          >
+            <ScrollView
+              contentContainerStyle={{
+                flexGrow: 1,
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+              keyboardShouldPersistTaps="handled"
             >
-              <Text
+              <View
                 style={[
-                  styles.modalTitle,
-                  { color: darkMode ? "#fff" : "#000" },
+                  styles.modalContainer,
+                  { backgroundColor: darkMode ? "#222" : "#fff" },
                 ]}
               >
-                Edit Goal
-              </Text>
-              <TextInput
-                value={editedText}
-                onChangeText={setEditedText}
-                style={[
-                  styles.input,
-                  {
-                    backgroundColor: darkMode ? "#1E1E1E" : "#f9f9f9",
-                    color: darkMode ? "#fff" : "#000",
-                    height: Math.max(100, goalText.split("\n").length * 22),
-                    textAlignVertical: "top",
-                  },
-                ]}
-                multiline
-              />
-              <View style={styles.modalButtons}>
-                <TouchableOpacity
-                  style={[styles.modalBtn, { backgroundColor: "#0078ff" }]}
-                  onPress={confirmEdit}
+                <Text
+                  style={[
+                    styles.modalTitle,
+                    { color: darkMode ? "#fff" : "#000" },
+                  ]}
                 >
-                  <Text style={styles.btnText}>Save</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.modalBtn, { backgroundColor: "#888" }]}
-                  onPress={() => setEditModalVisible(false)}
-                >
-                  <Text style={styles.btnText}>Cancel</Text>
-                </TouchableOpacity>
+                  Edit Goal
+                </Text>
+
+                <TextInput
+                  value={editedText}
+                  onChangeText={setEditedText}
+                  onContentSizeChange={(e) =>
+                    setInputHeight(Math.min(200, Math.max(100, e.nativeEvent.contentSize.height)))
+                  }
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: darkMode ? "#1E1E1E" : "#f9f9f9",
+                      color: darkMode ? "#fff" : "#000",
+                      height: inputHeight,
+                      textAlignVertical: "top",
+                      width: "100%",
+                      flexWrap: "wrap",
+                    },
+                  ]}
+                  multiline
+                />
+
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity
+                    style={[styles.modalBtn, { backgroundColor: "#0078ff" }]}
+                    onPress={confirmEdit}
+                  >
+                    <Text style={styles.btnText}>Save</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.modalBtn, { backgroundColor: "#888" }]}
+                    onPress={() => setEditModalVisible(false)}
+                  >
+                    <Text style={styles.btnText}>Cancel</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
-          </View>
+            </ScrollView>
+          </KeyboardAvoidingView>
         </Modal>
 
         {/* Delete Modal */}
@@ -646,7 +678,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   modalContainer: {
-    width: "80%",
+    width: "90%",
+    maxWidth: 400,
     borderRadius: 15,
     padding: 20,
     alignItems: "center",
