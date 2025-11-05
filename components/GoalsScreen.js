@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
   TouchableOpacity,
   RefreshControl,
   Modal,
@@ -17,7 +16,7 @@ import { Animated } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import uuid from "react-native-uuid";
 import { auth, db } from "../utils/firebaseConfig";
-import { doc, setDoc, getDocs, collection, query, where, deleteDoc, addDoc } from "firebase/firestore";
+import { doc, setDoc, getDocs, collection, query, where, deleteDoc, addDoc, orderBy } from "firebase/firestore";
 import { KeyboardAvoidingView, Platform, ScrollView } from "react-native";
 
 export default function GoalsScreen() {
@@ -92,8 +91,8 @@ export default function GoalsScreen() {
   const loadGoals = async () => {
     try {
       const user = auth.currentUser;
-        if (!user) return;
-        const savedGoals = await AsyncStorage.getItem(`goals_${user.uid}`);
+      if (!user) return;
+      const savedGoals = await AsyncStorage.getItem(`goals_${user.uid}`);
       if (savedGoals) {
         const parsed = JSON.parse(savedGoals);
         // ensure each goal has an id
@@ -101,8 +100,12 @@ export default function GoalsScreen() {
           id: g.id || uuid.v4(),
           ...g,
         }));
-        setGoals(withIds);
-        await AsyncStorage.setItem(`goals_${user.uid}`, JSON.stringify(withIds));
+        const sorted = withIds.sort(
+          (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+        );
+
+        setGoals(sorted);
+        await AsyncStorage.setItem(`goals_${user.uid}`, JSON.stringify(sorted));
       } else setGoals([]);
     } catch (error) {
       console.error("Error loading goals:", error);
@@ -114,8 +117,22 @@ export default function GoalsScreen() {
     if (!user) return;
 
     try {
-      const q = query(collection(db, "goals"), where("uid", "==", user.uid));
-      const snapshot = await getDocs(q);
+      let snapshot;
+
+      try {
+        // Try query with orderBy (will fail if no index)
+        const q = query(
+          collection(db, "goals"),
+          where("uid", "==", user.uid),
+          orderBy("createdAt", "desc")
+        );
+        snapshot = await getDocs(q);
+      } catch (err) {
+        console.warn("No Firestore index found, using fallback:", err.code);
+        // fallback: no orderBy, just get all then sort locally
+        const q = query(collection(db, "goals"), where("uid", "==", user.uid));
+        snapshot = await getDocs(q);
+      }
 
       const userGoals = snapshot.docs.map((doc) => ({
         id: doc.id,
@@ -123,25 +140,18 @@ export default function GoalsScreen() {
       }));
 
       // Merge with local goals
-      const saved = await AsyncStorage.getItem(`goals_${user.uid}`)
+      const saved = await AsyncStorage.getItem(`goals_${user.uid}`);
       const localGoals = saved ? JSON.parse(saved) : [];
 
-      // Build a map of firestore goals by id and by text for quick lookup
-      const firestoreById = new Map(userGoals.map((g) => [g.id, g]));
       const firestoreByText = new Map(userGoals.map((g) => [g.text, g]));
-
-      // Start with Firestore goals (they have stable ids)
       const merged = [...userGoals];
 
-      // Add local goals only if they don't exist in Firestore (by text)
       for (const lg of localGoals) {
         if (!firestoreByText.has(lg.text)) {
-          // Ensure local goal has an id (keep existing id if present)
-          merged.push({ id: lg.id || lg.id === 0 ? lg.id : undefined, ...lg });
+          merged.push({ id: lg.id || uuid.v4(), ...lg });
         }
       }
 
-      // Final dedupe by text to be safe (preserve first occurrence — Firestore wins)
       const seen = new Set();
       const deduped = merged.filter((g) => {
         if (!g || !g.text) return false;
@@ -150,10 +160,16 @@ export default function GoalsScreen() {
         return true;
       });
 
-      setGoals(deduped);
-      await AsyncStorage.setItem(`goals_${user.uid}`, JSON.stringify(deduped));
+      const sorted = deduped.sort(
+        (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+      );
 
-      console.log(`Loaded ${userGoals.length} goals from Firestore, merged ${localGoals.length} local`);
+      setGoals(sorted);
+      await AsyncStorage.setItem(`goals_${user.uid}`, JSON.stringify(sorted));
+
+      console.log(
+        `Loaded ${userGoals.length} goals from Firestore, merged ${localGoals.length} local`
+      );
     } catch (error) {
       console.error("Failed to load goals:", error);
     }
@@ -167,7 +183,7 @@ export default function GoalsScreen() {
   const saveGoals = async (updatedGoals) => {
     setGoals(updatedGoals);
     const user = auth.currentUser;
-      if (user)
+    if (user)
       await AsyncStorage.setItem(`goals_${user.uid}`, JSON.stringify(updatedGoals));
   };
 
@@ -314,10 +330,11 @@ export default function GoalsScreen() {
   };
 
   // Pull to refresh
-  const onRefresh = useCallback(async () => {
+  const onRefresh = useCallback(() => {
     setRefreshing(true);
-    await loadGoals();
-    setRefreshing(false);
+    loadGoalsFromFirestore().finally(() => {
+      setRefreshing(false);
+    });
   }, []);
 
   return (
@@ -328,38 +345,40 @@ export default function GoalsScreen() {
           { backgroundColor: darkMode ? "#121212" : "#fff" },
         ]}
       >
-        <Text style={[styles.textTitle, { color: darkMode ? "#fff" : "#000" }]}> List of Goals </Text>
-        {goals.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Text style={[styles.text, { color: darkMode ? "#fff" : "#555" }]}>
-              No goals yet
-            </Text>
-          </View>
-        ) : (
-          <FlatList
-            data={goals}
-            keyExtractor={(item, index) => item.id || `${item.text}-${index}`}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={onRefresh}
-                tintColor="#0078ff"
-                colors={["#0078ff"]}
-              />
-            }
-            contentContainerStyle={{ padding: 20 }}
-            renderItem={({ item }) => (
+        <Text style={[styles.textTitle, { color: darkMode ? "#fff" : "#000" }]}>
+          List of Goals
+        </Text>
+
+        <ScrollView
+          contentContainerStyle={{ padding: 20, flexGrow: 1 }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor="#0078ff"
+              colors={["#0078ff"]}
+            />
+          }
+          alwaysBounceVertical
+          overScrollMode="always"
+          keyboardShouldPersistTaps="handled"
+        >
+          {goals.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={[styles.text, { color: darkMode ? "#fff" : "#555" }]}>
+                No goals yet
+              </Text>
+            </View>
+          ) : (
+            goals.map((item, index) => (
               <View
+                key={item.id || `${item.text}-${index}`}
                 style={[
                   styles.goalItem,
                   {
                     backgroundColor: item.completed
-                      ? darkMode
-                      ? "#1d3b1d"
-                        : "#d4f7d4"
-                      : darkMode
-                      ? "#2a2a2a"
-                      : "#fff",
+                      ? (darkMode ? "#1d3b1d" : "#d4f7d4")
+                      : (darkMode ? "#2a2a2a" : "#fff"),
                   },
                 ]}
               >
@@ -368,18 +387,14 @@ export default function GoalsScreen() {
                   onPress={() => toggleGoal(item.id)}
                 >
                   <Ionicons
-                    name={
-                      item.completed ? "checkmark-circle" : "ellipse-outline"
-                    }
+                    name={item.completed ? "checkmark-circle" : "ellipse-outline"}
                     size={22}
                     color={item.completed ? "#0078ff" : "#999"}
                   />
                   <Text
                     style={{
                       color: darkMode ? "#fff" : "#000",
-                      textDecorationLine: item.completed
-                        ? "line-through"
-                        : "none",
+                      textDecorationLine: item.completed ? "line-through" : "none",
                       marginLeft: 10,
                       flex: 1,
                     }}
@@ -388,7 +403,7 @@ export default function GoalsScreen() {
                   </Text>
                 </TouchableOpacity>
 
-                {/* Edit Icon */}
+                {/* Edit */}
                 <TouchableOpacity onPress={() => openEditModal(item)}>
                   <Ionicons
                     name="create-outline"
@@ -398,14 +413,14 @@ export default function GoalsScreen() {
                   />
                 </TouchableOpacity>
 
-                {/* Delete Icon */}
+                {/* Delete */}
                 <TouchableOpacity onPress={() => openDeleteModal(item)}>
                   <Ionicons name="trash-outline" size={22} color="#ff3b30" />
                 </TouchableOpacity>
               </View>
-            )}
-          />
-        )}
+            ))
+          )}
+        </ScrollView>
 
         <TouchableOpacity
           style={[styles.addBtn, { backgroundColor: "#0078ff" }]}
@@ -600,28 +615,28 @@ export default function GoalsScreen() {
               <Ionicons
                 name={
                   (alertTitle.toLowerCase().includes("error") ||
-                  alertMessage.toLowerCase().includes("error") ||
-                  alertTitle.toLowerCase().includes("fail") ||
-                  alertMessage.toLowerCase().includes("fail"))
+                    alertMessage.toLowerCase().includes("error") ||
+                    alertTitle.toLowerCase().includes("fail") ||
+                    alertMessage.toLowerCase().includes("fail"))
                     ? "alert-circle-outline"
                     : (alertTitle.toLowerCase().includes("duplicate") ||
                       alertTitle.toLowerCase().includes("empty") ||
                       alertTitle.toLowerCase().includes("not signed"))
-                    ? "warning-outline"
-                    : "checkmark-circle-outline"
+                      ? "warning-outline"
+                      : "checkmark-circle-outline"
                 }
                 size={50}
                 color={
                   (alertTitle.toLowerCase().includes("error") ||
-                  alertMessage.toLowerCase().includes("error") ||
-                  alertTitle.toLowerCase().includes("fail") ||
-                  alertMessage.toLowerCase().includes("fail"))
+                    alertMessage.toLowerCase().includes("error") ||
+                    alertTitle.toLowerCase().includes("fail") ||
+                    alertMessage.toLowerCase().includes("fail"))
                     ? "#ff3b30"
                     : (alertTitle.toLowerCase().includes("duplicate") ||
                       alertTitle.toLowerCase().includes("empty") ||
                       alertTitle.toLowerCase().includes("not signed"))
-                    ? "#ffcc00"
-                    : "#4CD964"
+                      ? "#ffcc00"
+                      : "#4CD964"
                 }
               />
               <Text
@@ -640,17 +655,17 @@ export default function GoalsScreen() {
               >
                 {alertMessage}
               </Text>
-                <TouchableOpacity
-                  style={styles.alertBtn}
-                  activeOpacity={0.8}
-                  onPress={() => setAlertVisible(false)}
+              <TouchableOpacity
+                style={styles.alertBtn}
+                activeOpacity={0.8}
+                onPress={() => setAlertVisible(false)}
+              >
+                <Text
+                  style={styles.alertBtnText}
                 >
-                  <Text
-                    style={styles.alertBtnText}
-                  >
-                    OK
-                  </Text>
-                </TouchableOpacity>
+                  OK
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
         </Modal>

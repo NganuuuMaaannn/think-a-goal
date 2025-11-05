@@ -7,7 +7,6 @@ import {
   ScrollView,
   RefreshControl,
   ActivityIndicator,
-  FlatList,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
@@ -15,14 +14,9 @@ import { ThemeContext } from "../utils/ThemeContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { auth, db } from "../utils/firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
-import {
-  collection,
-  query,
-  where,
-  getDocs,
-} from "firebase/firestore";
+import { collection, query, where, getDocs, orderBy, doc, setDoc } from "firebase/firestore";
 import { useNavigation } from "@react-navigation/native";
-
+import uuid from "react-native-uuid";
 
 export default function DashboardScreen() {
   const { darkMode, setDarkMode } = useContext(ThemeContext);
@@ -70,11 +64,11 @@ export default function DashboardScreen() {
 
       setQuote(
         selectedQuote || {
-          q: "Believe in your dreams even when they seem impossible.", 
+          q: "Believe in your dreams even when they seem impossible.",
         }
       );
     } catch (error) {
-      console.warn("⚠️ Quote fetch failed, using fallback:", error.name);
+      console.warn("Quote fetch failed, using fallback:", error.name);
       setQuote({
         q: "Set your goals high and don’t stop till you get there.",
       });
@@ -97,33 +91,42 @@ export default function DashboardScreen() {
     if (!user) return;
 
     try {
-      const q = query(collection(db, "goals"), where("uid", "==", user.uid));
-      const snapshot = await getDocs(q);
+      let snapshot;
+      try {
+        const qRef = query(
+          collection(db, "goals"),
+          where("uid", "==", user.uid),
+          orderBy("createdAt", "desc")
+        );
+        snapshot = await getDocs(qRef);
+      } catch (err) {
+        console.warn("No index found, using fallback:", err.code);
+        const qRef = query(collection(db, "goals"), where("uid", "==", user.uid));
+        snapshot = await getDocs(qRef);
+      }
 
-      const userGoals = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
+      const userGoals = snapshot.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
       }));
 
-      // Merge with local goals
-      const saved = await AsyncStorage.getItem(`goals_${user.uid}`)
+      const saved = await AsyncStorage.getItem(`goals_${user.uid}`);
       const localGoals = saved ? JSON.parse(saved) : [];
 
-      // Build a map of firestore goals by id and by text for quick lookup
       const firestoreByText = new Map(userGoals.map((g) => [g.text, g]));
-
-      // Start with Firestore goals (they have stable ids)
       const merged = [...userGoals];
 
-      // Add local goals only if they don't exist in Firestore (by text)
       for (const lg of localGoals) {
+        if (!lg?.text) continue;
         if (!firestoreByText.has(lg.text)) {
-          // Ensure local goal has an id (keep existing id if present)
-          merged.push({ id: lg.id || lg.id === 0 ? lg.id : undefined, ...lg });
+          const ensuredId =
+            typeof lg.id === "string" && lg.id.length > 0
+              ? lg.id
+              : String(uuid.v4());
+          merged.push({ ...lg, id: ensuredId });
         }
       }
 
-      // Final dedupe by text to be safe (preserve first occurrence — Firestore wins)
       const seen = new Set();
       const deduped = merged.filter((g) => {
         if (!g || !g.text) return false;
@@ -132,12 +135,71 @@ export default function DashboardScreen() {
         return true;
       });
 
-      setGoals(deduped);
-      await AsyncStorage.setItem(`goals_${user.uid}`, JSON.stringify(deduped));
+      const sorted = deduped.sort(
+        (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+      );
 
-      console.log(`Loaded ${userGoals.length} goals from Firestore, merged ${localGoals.length} local`);
+      setGoals(sorted);
+      await AsyncStorage.setItem(`goals_${user.uid}`, JSON.stringify(sorted));
+
+      console.log(
+        `Loaded ${userGoals.length} Firestore goals, merged ${localGoals.length} local`
+      );
     } catch (error) {
-      console.error("❌ Failed to load goals:", error);
+      console.error("Failed to load goals:", error);
+    }
+  };
+
+
+  const saveGoals = async (updatedGoals) => {
+    setGoals(updatedGoals);
+    const user = auth.currentUser;
+    if (user) {
+      await AsyncStorage.setItem(`goals_${user.uid}`, JSON.stringify(updatedGoals));
+    }
+  };
+
+
+  const toggleGoal = async (id) => {
+    const idx = goals.findIndex((g) => g.id === id);
+    if (idx === -1) {
+      console.warn("toggleGoal: goal not found for id", id);
+      return;
+    }
+
+    const updatedItem = { ...goals[idx], completed: !goals[idx].completed };
+    const ensuredId =
+      typeof updatedItem.id === "string" && updatedItem.id.length > 0
+        ? updatedItem.id
+        : String(uuid.v4());
+    updatedItem.id = ensuredId;
+
+    const updated = [...goals];
+    updated[idx] = updatedItem;
+
+    // Save locally
+    await saveGoals(updated);
+
+    const user = auth.currentUser;
+    if (!user) return;
+
+    try {
+      const ref = doc(db, "goals", ensuredId);
+      await setDoc(
+        ref,
+        {
+          uid: user.uid,
+          text: updatedItem.text,
+          completed: updatedItem.completed,
+          createdAt: updatedItem.createdAt ?? new Date().toISOString(),
+        },
+        { merge: true }
+      );
+
+      // 🔄 Refresh UI
+      await loadGoalsFromFirestore();
+    } catch (err) {
+      console.error("Toggle error:", err);
     }
   };
 
@@ -213,8 +275,8 @@ export default function DashboardScreen() {
                     progress === 100
                       ? "#0078ff"
                       : darkMode
-                      ? "#fff"
-                      : "#000",
+                        ? "#fff"
+                        : "#000",
                 },
               ]}
             >
@@ -228,7 +290,6 @@ export default function DashboardScreen() {
               { backgroundColor: darkMode ? "#1E1E1E" : "#f9f9f9" },
             ]}
           >
-            {/* Header Row: My Goals + View All */}
             <View style={styles.cardHeader}>
               <Text
                 style={[styles.cardTitle, { color: darkMode ? "#fff" : "#000" }]}
@@ -250,34 +311,44 @@ export default function DashboardScreen() {
             </View>
 
             {goals.length === 0 ? (
-              <Text
+              <View
                 style={{
-                  color: darkMode ? "#888" : "#666",
-                  textAlign: "center",
-                  marginTop: 10,
+                  flexGrow: 1,
+                  justifyContent: "center",
+                  alignItems: "center",
+                  paddingVertical: 20,
                 }}
               >
-                No goals yet. Tap + to add one!
-              </Text>
+                <Text
+                  style={{
+                    color: darkMode ? "#888" : "#666",
+                    textAlign: "center",
+                    marginTop: 10,
+                  }}
+                >
+                  No goals yet. Tap + to add one!
+                </Text>
+              </View>
             ) : (
-              <FlatList
-                data={goals.slice(0, 5)}
-                keyExtractor={(item, index) => item.id || `${item.text}-${index}`}
-                scrollEnabled={false}
-                renderItem={({ item }) => (
-                  <View
-                    style={[
-                      styles.goalItem,
-                      {
-                        backgroundColor: item.completed
-                          ? darkMode
-                            ? "#1d3b1d"
-                            : "#d4f7d4"
-                          : darkMode
+              goals.slice(0, 5).map((item, index) => (
+                <View
+                  key={item.id || `${item.text}-${index}`}
+                  style={[
+                    styles.goalItem,
+                    {
+                      backgroundColor: item.completed
+                        ? darkMode
+                          ? "#1d3b1d"
+                          : "#d4f7d4"
+                        : darkMode
                           ? "#2a2a2a"
                           : "#fff",
-                      },
-                    ]}
+                    },
+                  ]}
+                >
+                  <TouchableOpacity
+                    style={{ flexDirection: "row", alignItems: "center", flex: 1 }}
+                    onPress={() => toggleGoal(item.id)}
                   >
                     <Text
                       style={{
@@ -290,10 +361,16 @@ export default function DashboardScreen() {
                     >
                       {item.text}
                     </Text>
-                  </View>
-                )}
-              />
+                    <Ionicons
+                      name={item.completed ? "checkmark-circle" : "ellipse-outline"}
+                      size={22}
+                      color={item.completed ? "#0078ff" : "#999"}
+                    />
+                  </TouchableOpacity>
+                </View>
+              ))
             )}
+
           </View>
         </ScrollView>
 
