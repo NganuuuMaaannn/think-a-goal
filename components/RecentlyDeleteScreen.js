@@ -2,11 +2,11 @@ import { useEffect, useState, useContext } from "react";
 import {
   View,
   Text,
-  FlatList,
   TouchableOpacity,
   StyleSheet,
   RefreshControl,
   Modal,
+  ScrollView,
 } from "react-native";
 import { ThemeContext } from "../utils/ThemeContext";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
@@ -190,25 +190,40 @@ export default function ProfileScreen() {
         )}
 
         {backupGoals.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Text style={{ color: darkMode ? "#fff" : "#555" }}>
-              No recently deleted goals.
-            </Text>
-          </View>
-        ) : (
-          <FlatList
-            data={backupGoals}
-            keyExtractor={(item) => item.id}
+          <ScrollView
+            contentContainerStyle={{ flexGrow: 1, justifyContent: "center", alignItems: "center" }}
             refreshControl={
               <RefreshControl
                 refreshing={refreshing}
                 onRefresh={onRefresh}
                 tintColor="#0078ff"
+                colors={["#0078ff"]}
               />
             }
-            contentContainerStyle={{ padding: 20 }}
-            renderItem={({ item }) => (
+            alwaysBounceVertical
+            overScrollMode="always"
+          >
+            <Text style={{ color: darkMode ? "#fff" : "#555" }}>
+              No recently deleted goals.
+            </Text>
+          </ScrollView>
+        ) : (
+          <ScrollView
+            contentContainerStyle={{ padding: 20, flexGrow: 1 }}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor="#0078ff"
+                colors={["#0078ff"]}
+              />
+            }
+            alwaysBounceVertical
+            overScrollMode="always"
+          >
+            {backupGoals.map((item) => (
               <View
+                key={item.id}
                 style={[
                   styles.goalItem,
                   { backgroundColor: darkMode ? "#1E1E1E" : "#f9f9f9" },
@@ -227,10 +242,12 @@ export default function ProfileScreen() {
                   />
                 </TouchableOpacity>
 
-                <TouchableOpacity onPress={() => {
-                  setSelectedGoal(item);
-                  setDeleteModalVisible(true);
-                }}>
+                <TouchableOpacity
+                  onPress={() => {
+                    setSelectedGoal(item);
+                    setDeleteModalVisible(true);
+                  }}
+                >
                   <Ionicons
                     name="trash-bin"
                     size={26}
@@ -239,8 +256,8 @@ export default function ProfileScreen() {
                   />
                 </TouchableOpacity>
               </View>
-            )}
-          />
+            ))}
+          </ScrollView>
         )}
 
         {/* Individual Delete Modal */}
