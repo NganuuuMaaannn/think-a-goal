@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Modal,
   ActivityIndicator,
+  Image
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Feather from '@expo/vector-icons/Feather';
@@ -62,7 +63,7 @@ export default function LoginScreen() {
 
   return (
     <LinearGradient
-      colors={['#4facfe', '#00f2fe']}
+      colors={['#4facfe', '#00f2fe',]}
       style={styles.container}
       start={{ x: 0, y: 0 }}
       end={{ x: 0, y: 1 }}
@@ -80,7 +81,12 @@ export default function LoginScreen() {
         }}
         style={{ width: "100%" }}
       >
-        <Text style={styles.title}>Login</Text>
+        <Image
+            source={require("../assets/logo.png")}
+            style={styles.logo}
+            resizeMode="contain"
+        />
+        <Text style={styles.title}>Think A Goal</Text>
 
         <View style={styles.box}>
           {/* Email */}
@@ -181,11 +187,13 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 8,
   },
+  logo: { width: 150, height: 150, marginTop: -60, marginBottom: 40 },
   title: {
-    fontSize: 40,
+    fontSize: 38,
     fontWeight: "bold",
     color: "#fff",
     marginBottom: 40,
+    marginTop: -30,
     textAlign: "center",
   },
   inputWrapper: {
