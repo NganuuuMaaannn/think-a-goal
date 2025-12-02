@@ -196,7 +196,7 @@ export default function DashboardScreen() {
         { merge: true }
       );
 
-      // 🔄 Refresh UI
+      // Refresh UI
       await loadGoalsFromFirestore();
     } catch (err) {
       console.error("Toggle error:", err);
